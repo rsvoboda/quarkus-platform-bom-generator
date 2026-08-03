@@ -32,11 +32,40 @@ public class PlatformBomUtils {
      * always placed last (after all classified entries) instead of first. Gradle doesn't respect
      * classifiers (it totally removes them), so the default needs to come last.
      */
-    private static final Comparator<ArtifactKey> CONSTRAINT_ORDER = Comparator.comparing(ArtifactKey::getGroupId)
-            .thenComparing(ArtifactKey::getArtifactId)
-            .thenComparing(key -> key.getClassifier().isEmpty() ? 1 : 0)
-            .thenComparing(ArtifactKey::getClassifier)
-            .thenComparing(key -> key.getType() == null ? "" : key.getType());
+    private static final Comparator<ArtifactKey> CONSTRAINT_ORDER = (key1, key2) -> {
+        int i = key1.getGroupId().compareTo(key2.getGroupId());
+        if (i != 0) {
+            return i;
+        }
+        i = key1.getArtifactId().compareTo(key2.getArtifactId());
+        if (i != 0) {
+            return i;
+        }
+        i = key1.getClassifier().compareTo(key2.getClassifier());
+        if (i != 0) {
+            if (key1.getClassifier().isEmpty()) {
+                return 1;
+            }
+            if (key2.getClassifier().isEmpty()) {
+                return -1;
+            }
+            return i;
+        }
+        if (key1.getType() == null || key1.getType().isEmpty()) {
+            return key2.getType() != null && !key2.getType().isEmpty() ? -1 : 0;
+        }
+        if (key2.getType() == null || key2.getType().isEmpty()) {
+            return 1;
+        }
+        return key1.getType().compareTo(key2.getType());
+    };
+
+    /**
+     * For testing.
+     */
+    static void sortConstraints(List<ArtifactKey> keys) {
+        keys.sort(CONSTRAINT_ORDER);
+    }
 
     /**
      * Persists decomposed platform BOM to a pom.xml filling in developer, SCM and other info from the base model
